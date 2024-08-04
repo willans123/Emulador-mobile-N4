@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced TapThreshold with Scale, Aimlock, Aim FOV, and Mouse Speed</title>
+    <style>
+        #touchArea {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            background-color: lightgray;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            border: 2px solid #ccc;
+            transition: transform 0.1s ease, width 0.1s ease, height 0.1s ease;
+        }
+        #aimTarget {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border-radius: 50%;
+        }
+        .highlight {
+            animation: highlight 1s ease;
+        }
+        @keyframes highlight {
+            0% { border-color: yellow; }
+            100% { border-color: #ccc; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="touchArea">
+    <div id="aimTarget"></div>
+</div>
+<p id="message"></p>
+
+<label for="scalePicker">Pick Scale:</label>
+<select id="scalePicker">
+    <option value="0.7">0.7x</option>
+    <option value="1.0">1.0x</option>
+    <option value="2.0">2.0x</option>
+    <option value="3.0">3.0x</option>
+    <option value="4.0">4.0x</option>
+    <option value="5.0">5.0x</option>
+    <option value="6.0">6.0x</option>
+    <option value="7.0">7.0x</option>
+    <option value="8.0">8.0x</option>
+    <option value="25000000.0">25000000.0x</option>
+</select>
+<button onclick="applyScale()">Apply Scale</button>
+
+<br><br>
+
+<label for="aimlock">Aimlock:</label>
+<select id="aimlock">
+    <option value="off">Off</option>
+    <option value="on">On</option>
+</select>
+<button onclick="applyAimlock()">Apply Aimlock</button>
+
+<br><br>
+
+<label for="aimIntensity">Aimlock Intensity:</label>
+<select id="aimIntensity">
+    <option value="heavy">Pesado</option>
+    <option value="light">Leve</option>
+    <option value="superLight">Super Leve</option>
+    <option value="aggressive">Agressivo</option>
+</select>
+<button onclick="applyAimIntensity()">Apply Aim Intensity</button>
+
+<br><br>
+
+<label for="aimFov">Aim FOV:</label>
+<select id="aimFov">
+    <option value="off">Off</option>
+    <option value="on">On</option>
+</select>
+<button onclick="applyAimFov()">Apply Aim FOV</button>
+
+<br><br>
+
+<label for="aimFovIntensity">Aim FOV Intensity:</label>
+<select id="aimFovIntensity">
+    <option value="heavy">Pesado</option>
+    <option value="light">Leve</option>
+    <option value="superLight">Super Leve</option>
+    <option value="aggressive">Agressivo</option>
+</select>
+<button onclick="applyAimFovIntensity()">Apply Aim FOV Intensity</button>
+
+<br><br>
+
+<label for="mouseSpeed">Mouse Speed:</label>
+<input type="range" id="mouseSpeed" min="1" max="10" value="5">
+<button onclick="applyMouseSpeed()">Apply Mouse Speed</button>
+
+<script>
+    const touchArea = document.getElementById('touchArea');
+    const aimTarget = document.getElementById('aimTarget');
+    const message = document.getElementById('message');
+    const scalePicker = document.getElementById('scalePicker');
+    const aimlockPicker = document.getElementById('aimlock');
+    const aimIntensityPicker = document.getElementById('aimIntensity');
+    const aimFovPicker = document.getElementById('aimFov');
+    const aimFovIntensityPicker = document.getElementById('aimFovIntensity');
+    const mouseSpeedInput = document.getElementById('mouseSpeed');
+
+    let touchStartTime = 0;
+    const tapThreshold = 0.00001; // 1 millisecond
+    let aimlockEnabled = false;
+    let aimFovEnabled = false;
+    let aimFov = 50; // default FOV value
+    let mouseSpeed = 1;
+    let aimIntensity = 'heavy';
+    let aimFovIntensity = 'heavy';
+
+    window.onload = () => {
+        loadSettings();
+    };
+
+    function loadSettings() {
+        scalePicker.value = localStorage.getItem('scale') || '1.0';
+        aimlockPicker.value = localStorage.getItem('aimlock') || 'off';
+        aimIntensityPicker.value = localStorage.getItem('aimIntensity') || 'heavy';
+        aimFovPicker.value = localStorage.getItem('aimFov') || 'off';
+        aimFovIntensityPicker.value = localStorage.getItem('aimFovIntensity') || 'heavy';
+        mouseSpeedInput.value = localStorage.getItem('mouseSpeed') || '5';
+
+        applyScale();
+        applyAimlock();
+        applyAimIntensity();
+        applyAimFov();
+        applyAimFovIntensity();
+        applyMouseSpeed();
+    }
+
+    function saveSetting(key, value) {
+        localStorage.setItem(key, value);
+    }
+
+    touchArea.addEventListener('mousemove', (event) => {
+        const rect = touchArea.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        moveAimTarget(x, y);
+    });
+
+    function applyScale() {
+        const scaleValue = scalePicker.value;
+        touchArea.style.transform = `scale(${scaleValue})`;
+        saveSetting('scale', scaleValue);
+        highlightChange();
+    }
+
+    function applyAimlock() {
+        aimlockEnabled = aimlockPicker.value === 'on';
+        message.textContent = aimlockEnabled ? 'Aimlock is ON' : 'Aimlock is OFF';
+        saveSetting('aimlock', aimlockPicker.value);
+        highlightChange();
+    }
+
+    function applyAimIntensity() {
+        aimIntensity = aimIntensityPicker.value;
+        message.textContent = `Aimlock Intensity set to ${aimIntensity}`;
+        saveSetting('aimIntensity', aimIntensityPicker.value);
+        highlightChange();
+    }
+
+    function applyAimFov() {
+        aimFovEnabled = aimFovPicker.value === 'on';
+        message.textContent = aimFovEnabled ? `Aim FOV is ON (${aimFov}px)` : 'Aim FOV is OFF';
+        saveSetting('aimFov', aimFovPicker.value);
+        highlightChange();
+    }
+
+    function applyAimFovIntensity() {
+        aimFovIntensity = aimFovIntensityPicker.value;
+        message.textContent = `Aim FOV Intensity set to ${aimFovIntensity}`;
+        saveSetting('aimFovIntensity', aimFovIntensityPicker.value);
+        highlightChange();
+    }
+
+    function applyMouseSpeed() {
+        mouseSpeed = parseFloat(mouseSpeedInput.value);
+        message.textContent = `Mouse Speed set to ${mouseSpeed}`;
+        saveSetting('mouseSpeed', mouseSpeed);
+        highlightChange();
+    }
+
+    function moveAimTarget(x, y) {
+        const rect = touchArea.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+
+        let aimlockFactor;
+        switch (aimIntensity) {
+            case 'light':
+                aimlockFactor = 0.5;
+                break;
+            case 'superLight':
+                aimlockFactor = 0.25;
+                break;
+            case 'aggressive':
+                aimlockFactor = 1.5;
+                break;
+            case 'heavy':
+            default:
+                aimlockFactor = 1;
+                break;
+        }
+
+        let aimFovFactor;
+        switch (aimFovIntensity) {
+            case 'light':
+                aimFovFactor = 0.5;
+                break;
+            case 'superLight':
+                aimFovFactor = 0.25;
+                break;
+            case 'aggressive':
+                aimFovFactor = 1.5;
+                break;
+            case 'heavy':
+            default:
+                aimFovFactor = 1;
+                break;
+        }
+
+        if (aimlockEnabled && distance <= aimFov * aimFovFactor) {
+            aimTarget.style.left = `${centerX - 10}px`;
+            aimTarget.style.top = `${centerY - 10}px`;
+        } else if (aimFovEnabled && distance <= aimFov * aimFovFactor) {
+            aimTarget.style.left = `${x * mouseSpeed * aimlockFactor - 10}px`;
+            aimTarget.style.top = `${y * mouseSpeed * aimlockFactor - 10}px`;
+        } else {
+            aimTarget.style.left = `${x * mouseSpeed - 10}px`;
+            aimTarget.style.top = `${y * mouseSpeed - 10}px`;
+        }
+    }
+
+    function highlightChange() {
+        touchArea.classList.add('highlight');
+        setTimeout(() => touchArea.classList.remove('highlight'), 1000);
+    }
+</script>
+
+</body>
+</html>
